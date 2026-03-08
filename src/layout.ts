@@ -223,6 +223,25 @@ const kinsokuEnd = new Set([
   '\u301A', // 〚
 ])
 
+// Non-space punctuation that should stay with the preceding segment in
+// non-CJK text. Keep dash punctuation out of this set so lines may still break
+// before an em dash or hyphenated continuation, matching browser behavior more
+// closely on English prose.
+const leftStickyPunctuation = new Set([
+  '.', ',', '!', '?', ':', ';',
+  ')', ']', '}',
+  '%',
+  '”', '’', '»', '›',
+  '…',
+])
+
+function isLeftStickyPunctuationSegment(segment: string): boolean {
+  for (const ch of segment) {
+    if (!leftStickyPunctuation.has(ch)) return false
+  }
+  return segment.length > 0
+}
+
 // Unicode Bidirectional Algorithm (UAX #9), forked from pdf.js via Sebastian's
 // text-layout. Classifies characters into bidi types, computes embedding levels,
 // and reorders segments within each line for correct visual display of mixed
@@ -405,7 +424,9 @@ function prepareInternal(text: string, font: string, includeSegments: boolean): 
   const breakableWidths: (number[] | null)[] = []
   const segments = includeSegments ? [] as string[] : null
 
-  // Phase 1: merge punctuation into preceding word-like segments.
+  // Phase 1: merge left-sticky punctuation into the preceding non-space
+  // segment. Sentence punctuation should stay attached to the word on its
+  // left, but dash punctuation stays breakable.
   // Iterate the segmenter directly — no intermediate array allocation.
   // Parallel arrays instead of object allocations.
   let mergedLen = 0
@@ -417,7 +438,16 @@ function prepareInternal(text: string, font: string, includeSegments: boolean): 
   for (const s of sharedWordSegmenter.segment(normalized)) {
     const ws = !s.isWordLike && isWhitespace(s.segment)
 
-    if (!s.isWordLike && !ws && mergedLen > 0 && mergedWordLike[mergedLen - 1]!) {
+    if (
+      !s.isWordLike &&
+      !ws &&
+      mergedLen > 0 &&
+      !mergedSpace[mergedLen - 1]! &&
+      (
+        isLeftStickyPunctuationSegment(s.segment) ||
+        (s.segment === '-' && mergedWordLike[mergedLen - 1]!)
+      )
+    ) {
       mergedTexts[mergedLen - 1] += s.segment
     } else {
       mergedTexts[mergedLen] = s.segment
@@ -604,7 +634,6 @@ export function layout(prepared: PreparedText, maxWidth: number, lineHeight: num
       if (isSp[i]) continue // trailing whitespace hangs (CSS behavior)
 
       if (w > maxWidth && breakableWidths[i] !== null) {
-        // Segment wider than line — break at grapheme boundaries
         const gWidths = breakableWidths[i]!
         lineW = 0
         for (let g = 0; g < gWidths.length; g++) {

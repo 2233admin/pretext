@@ -6,6 +6,7 @@
   },
   "scripts": {
     "check": "tsc && oxlint --type-aware src",
+    "gatsby-check": "bun run scripts/gatsby-check.ts",
     "start": "bun --no-hmr pages/*.html"
   },
   "devDependencies": {

@@ -21,6 +21,7 @@ const FONT_NAME = 'Arial Unicode'
 const collapsibleWhitespaceRunRe = /[ \t\n\r\f]+/g
 const needsWhitespaceNormalizationRe = /[\t\n\r\f]| {2,}|^ | $/
 const openingPunctuation = new Set(['(', '[', '{', '“', '‘', '«', '‹'])
+const leftStickyPunctuation = new Set(['.', ',', '!', '?', ':', ';', ')', ']', '}', '%', '”', '’', '»', '›', '…'])
 
 beforeAll(async () => {
   await init()
@@ -38,6 +39,13 @@ function normalizeWhitespaceNormal(text: string): string {
     normalized = normalized.slice(0, -1)
   }
   return normalized
+}
+
+function isLeftStickyPunctuationSegment(segment: string): boolean {
+  for (const ch of segment) {
+    if (!leftStickyPunctuation.has(ch)) return false
+  }
+  return segment.length > 0
 }
 
 // --- Minimal reimplementation of prepare+layout using HarfBuzz ---
@@ -62,12 +70,12 @@ function segmentAndMeasure(text: string, fontSize: number): Segment[] {
   const segmenter = new Intl.Segmenter(undefined, { granularity: 'word' })
   const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
-  // Merge punctuation into preceding word
+  // Merge left-sticky punctuation into the preceding non-space segment.
   const rawSegs = [...segmenter.segment(normalized)]
   const merged: { text: string, isWordLike: boolean, isSpace: boolean }[] = []
   for (const s of rawSegs) {
     const ws = !s.isWordLike && /^\s+$/.test(s.segment)
-    if (!s.isWordLike && !ws && merged.length > 0) {
+    if (!s.isWordLike && !ws && merged.length > 0 && !merged[merged.length - 1]!.isSpace && isLeftStickyPunctuationSegment(s.segment)) {
       merged[merged.length - 1]!.text += s.segment
     } else {
       merged.push({ text: s.segment, isWordLike: s.isWordLike ?? false, isSpace: ws })
@@ -136,11 +144,12 @@ function layoutSegments(segments: Segment[], maxWidth: number, lineHeight: numbe
       } else if (seg.isSpace) {
         continue
       } else if (lastWordIdx > lineStart) {
+        const rewindStart = lastWordIdx
         lineCount++
-        lineStart = lastWordIdx
+        lineStart = rewindStart
         lineW = 0
         lastWordIdx = -1
-        for (let j = lastWordIdx; j <= i; j++) {
+        for (let j = rewindStart; j <= i; j++) {
           lineW += segments[j]!.width
           if (segments[j]!.isWordLike) lastWordIdx = j
         }
@@ -227,6 +236,16 @@ describe('layout consistency', () => {
     expect(segments[0]!.text).toBe('“Whenever')
   })
 
+  test('em dash stays breakable after the preceding word', () => {
+    const segments = segmentAndMeasure('universe—so', 16)
+    expect(segments.map(s => s.text)).toEqual(['universe', '—', 'so'])
+  })
+
+  test('closing quote sticks to a preceding dash segment', () => {
+    const segments = segmentAndMeasure('thing—”', 16)
+    expect(segments.map(s => s.text)).toEqual(['thing', '—”'])
+  })
+
   test('same text at same width always gives same result', () => {
     const text = 'The quick brown fox jumps over the lazy dog'
     const fontSize = 16
@@ -248,12 +267,12 @@ function layoutPrecise(text: string, fontSize: number, maxWidth: number, lineHei
   const segmenter = new Intl.Segmenter(undefined, { granularity: 'word' })
   const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
-  // Merge punctuation
+  // Merge left-sticky punctuation
   const rawSegs = [...segmenter.segment(normalized)]
   const merged: { text: string, isWordLike: boolean, isSpace: boolean }[] = []
   for (const s of rawSegs) {
     const ws = !s.isWordLike && /^\s+$/.test(s.segment)
-    if (!s.isWordLike && !ws && merged.length > 0) {
+    if (!s.isWordLike && !ws && merged.length > 0 && !merged[merged.length - 1]!.isSpace && isLeftStickyPunctuationSegment(s.segment)) {
       merged[merged.length - 1]!.text += s.segment
     } else {
       merged.push({ text: s.segment, isWordLike: s.isWordLike ?? false, isSpace: ws })
