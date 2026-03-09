@@ -103,6 +103,7 @@ function getEngineProfile(): EngineProfile {
 
 const engineProfile = getEngineProfile()
 const lineFitEpsilon = engineProfile.lineFitEpsilon
+const arabicScriptRe = /\p{Script=Arabic}/u
 
 function parseFontSize(font: string): number {
   const m = font.match(/(\d+(?:\.\d+)?)\s*px/)
@@ -176,6 +177,10 @@ function countEmojiGraphemes(text: string): number {
     if (isEmojiGrapheme(g.segment)) count++
   }
   return count
+}
+
+function containsArabicScript(text: string): boolean {
+  return arabicScriptRe.test(text)
 }
 
 // CJK characters don't use spaces between words. Intl.Segmenter with
@@ -287,6 +292,13 @@ const leftStickyPunctuation = new Set([
   '…',
 ])
 
+const arabicNoSpaceTrailingPunctuation = new Set([
+  ':', ';', '?', '!', '.',
+  '\u060C', // ،
+  '\u061B', // ؛
+  '\u061F', // ؟
+])
+
 const closingQuoteChars = new Set([
   '”', '’', '»', '›',
   '\u300D', // 」
@@ -325,6 +337,11 @@ function isRepeatedSingleCharRun(segment: string, ch: string): boolean {
     if (part !== ch) return false
   }
   return true
+}
+
+function endsWithArabicNoSpacePunctuation(segment: string): boolean {
+  if (!containsArabicScript(segment) || segment.length === 0) return false
+  return arabicNoSpaceTrailingPunctuation.has(segment[segment.length - 1]!)
 }
 
 function endsWithClosingQuote(text: string): boolean {
@@ -495,6 +512,16 @@ function buildMergedSegmentation(normalized: string): MergedSegmentation {
     ) {
       mergedTexts[mergedLen - 1] += s.segment
       mergedWordLike[mergedLen - 1] = mergedWordLike[mergedLen - 1]! || (s.isWordLike ?? false)
+    } else if (
+      !ws &&
+      mergedLen > 0 &&
+      !mergedSpace[mergedLen - 1]! &&
+      (s.isWordLike ?? false) &&
+      containsArabicScript(s.segment) &&
+      endsWithArabicNoSpacePunctuation(mergedTexts[mergedLen - 1]!)
+    ) {
+      mergedTexts[mergedLen - 1] += s.segment
+      mergedWordLike[mergedLen - 1] = true
     } else if (
       !s.isWordLike &&
       !ws &&

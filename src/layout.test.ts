@@ -108,6 +108,16 @@ describe('prepare invariants', () => {
     expect(prepared.segments).toEqual(['مرحبا،', ' ', 'عالم؟'])
   })
 
+  test('keeps arabic no-space punctuation clusters together', () => {
+    const prepared = prepareWithSegments('فيقول:وعليك السلام', FONT)
+    expect(prepared.segments).toEqual(['فيقول:وعليك', ' ', 'السلام'])
+  })
+
+  test('keeps arabic comma-followed text together without a space', () => {
+    const prepared = prepareWithSegments('همزةٌ،ما كان', FONT)
+    expect(prepared.segments).toEqual(['همزةٌ،ما', ' ', 'كان'])
+  })
+
   test('keeps devanagari danda punctuation attached to the preceding word', () => {
     const prepared = prepareWithSegments('नमस्ते। दुनिया॥', FONT)
     expect(prepared.segments).toEqual(['नमस्ते।', ' ', 'दुनिया॥'])

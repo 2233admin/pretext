@@ -397,6 +397,40 @@ Conclusion:
 - the probe tooling is a keeper
 - the punctuation finding is real
 - but it is not yet a safe direct heuristic for the main engine
+
+## Arabic no-space punctuation clusters
+
+The probe work led to one rule that *did* survive the real corpus:
+
+- if an Arabic segment ends with punctuation and is immediately followed by more Arabic text **with no intervening space**, merge the two during `prepare()`
+
+Representative examples:
+- `فيقول:وعليك`
+- `لجاز،لأنّها`
+- `همزةٌ،ما`
+- `الظُنون،ويلتفت`
+
+Why this is different from the rejected heuristic:
+- the rejected heuristic said "prefer a break before short punctuated Arabic phrases"
+- the surviving rule says "these no-space punctuation sequences are one cluster, so only break before the whole cluster if needed"
+
+That model matches the probes much better. In those cases, the browser is not simply preferring an earlier break for style; it is acting as though the punctuated phrase and the following Arabic word belong to the same unbreakable run.
+
+Results after landing that merge:
+- official browser accuracy corpus stayed clean in Chrome, Safari, and Firefox
+- Korean coarse corpus stayed exact
+- Hindi coarse corpus stayed exact
+- Arabic coarse corpus improved from `43/61` exact to `58/61` exact
+
+Remaining Arabic coarse misses after the merge:
+- `360 -> -34px`
+- `490 -> +34px`
+- `890 -> +34px`
+
+So this looks like a real keep:
+- prepare-time semantic improvement
+- no hot-path regression
+- large Arabic canary win
 - no hot-path `measureText()` verification was reintroduced
 - the browser-facing public API stayed `prepare()` / `layout()`
 
