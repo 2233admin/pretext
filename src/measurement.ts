@@ -194,4 +194,5 @@ export function getFontMeasurementState(font: string): {
 export function clearMeasurementCaches(): void {
   segmentMetricCaches.clear()
   emojiCorrectionCache.clear()
+  sharedGraphemeSegmenter = null
 }

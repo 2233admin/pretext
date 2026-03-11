@@ -35,11 +35,13 @@
 import { computeSegmentLevels } from './bidi.ts'
 import {
   analyzeText,
+  clearAnalysisCaches,
   endsWithClosingQuote,
   isCJK,
   kinsokuEnd,
   kinsokuStart,
   leftStickyPunctuation,
+  setAnalysisLocale,
   type SegmentBreakKind,
   type TextAnalysis,
 } from './analysis.ts'
@@ -704,5 +706,12 @@ export function layoutWithLines(prepared: PreparedTextWithSegments, maxWidth: nu
 }
 
 export function clearCache(): void {
+  clearAnalysisCaches()
+  sharedGraphemeSegmenter = null
   clearMeasurementCaches()
+}
+
+export function setLocale(locale?: string): void {
+  setAnalysisLocale(locale)
+  clearCache()
 }

@@ -11,9 +11,10 @@ Measuring text in the browser requires DOM reads (`getBoundingClientRect`, `offs
 Two-phase measurement centered around canvas `measureText()`:
 
 ```js
-import { prepare, layout } from './src/layout.ts'
+import { prepare, layout, setLocale } from './src/layout.ts'
 
 // Phase 1: measure word widths (once, when text appears)
+setLocale('th') // optional: pin Intl.Segmenter to the locale your app is laying out
 const block = prepare(commentText, '16px Inter')
 
 // Phase 2: compute height at any width (pure arithmetic, on every resize)
@@ -23,6 +24,8 @@ const { height, lineCount } = layout(block, containerWidth, 19)
 `prepare()` does a one-time text analysis pass (whitespace normalization, segmentation, punctuation/CJK fixes), then measures the resulting segments via canvas and caches the widths. On browsers that need emoji correction, it also does one cached DOM calibration read per font. `layout()` walks the cached widths to count lines and multiplies by the caller-provided `lineHeight` — no canvas, no DOM, no string operations. Each `layout()` call is ~0.0002ms.
 
 `prepare()` intentionally returns an opaque handle for the hot path. If you need the richer segment-level structure for diagnostics or custom line rendering, use `prepareWithSegments()` and treat that result as the experimental escape hatch.
+
+If your app wants `Intl.Segmenter` to use a specific locale instead of the runtime default, call `setLocale(locale)` before future `prepare()` calls. `setLocale()` resets the shared caches and retargets the hoisted word segmenter for subsequent text analysis.
 
 ## Practical uses
 
@@ -100,7 +103,7 @@ bun run corpus-font-matrix --id=ar-risalat-al-ghufran-part-1 --samples=5  # samp
 ```
 
 Pages:
-- `/demo.html` — visual demo placeholder (`TODO`)
+- `/demo.html` — manual line-placement demo built on `layoutWithLines()`
 - `/accuracy.html` — sweep across fonts, sizes, widths, i18n texts
 - `/benchmark.html` — performance comparison
 - `/bubbles.html` — bubble shrinkwrap demo

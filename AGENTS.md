@@ -34,6 +34,7 @@ Internal notes for contributors and agents. Use `README.md` as the public source
 ### Implementation notes
 
 - `prepare()` / `prepareWithSegments()` do horizontal-only work. `layout()` / `layoutWithLines()` take explicit `lineHeight`.
+- `setLocale(locale?)` retargets the hoisted word segmenter for future `prepare()` calls and clears shared caches. Use it before preparing new text when the app wants a specific `Intl.Segmenter` locale instead of the runtime default.
 - `prepare()` should stay the opaque fast-path handle. If a page/script needs segment arrays, that should usually flow through `prepareWithSegments()` instead of re-exposing internals on the main prepared type.
 - `prepare()` is internally split into a text-analysis phase and a measurement phase; keep that seam clear, but keep the public API simple unless requirements force a change.
 - The internal segment model now distinguishes at least five break kinds: normal text, collapsible spaces, non-breaking glue (`NBSP` / `NNBSP` / `WJ`-like runs), zero-width break opportunities, and soft hyphens. Do not collapse those back into one boolean unless the model gets richer in a better way.
@@ -90,7 +91,6 @@ Internal notes for contributors and agents. Use `README.md` as the public source
 
 ### Open questions
 
-- Locale switch: expose a way to reinitialize the hoisted segmenters and clear cache for a new locale.
 - Decide whether line-fit tolerance should stay as a browser-specific shim or move to runtime calibration alongside emoji correction.
 - If a future Arabic corpus still exposes misses after preprocessing and corpus cleanup, decide whether that needs a richer break-policy model or a truly shaping-aware architecture beyond segment-sum layout.
 - `layoutWithLines()` now returns line boundary cursors (`start` / `end`) in addition to `{ text, width }`; keep that data model useful for future manual reflow work.

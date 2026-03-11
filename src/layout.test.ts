@@ -15,6 +15,7 @@ let prepareWithSegments: LayoutModule['prepareWithSegments']
 let layout: LayoutModule['layout']
 let layoutWithLines: LayoutModule['layoutWithLines']
 let clearCache: LayoutModule['clearCache']
+let setLocale: LayoutModule['setLocale']
 
 const emojiPresentationRe = /\p{Emoji_Presentation}/u
 const punctuationRe = /[.,!?;:%)\]}'"”’»›…—-]/u
@@ -79,10 +80,11 @@ class TestOffscreenCanvas {
 beforeAll(async () => {
   Reflect.set(globalThis, 'OffscreenCanvas', TestOffscreenCanvas)
   const mod = await import('./layout.ts')
-  ;({ prepare, prepareWithSegments, layout, layoutWithLines, clearCache } = mod)
+  ;({ prepare, prepareWithSegments, layout, layoutWithLines, clearCache, setLocale } = mod)
 })
 
 beforeEach(() => {
+  setLocale(undefined)
   clearCache()
 })
 
@@ -294,6 +296,16 @@ describe('prepare invariants', () => {
     for (const width of [40, 80, 200]) {
       expect(layout(plain, width, LINE_HEIGHT)).toEqual(layout(rich, width, LINE_HEIGHT))
     }
+  })
+
+  test('locale can be reset without disturbing later prepares', () => {
+    setLocale('th')
+    const thai = prepare('ภาษาไทยภาษาไทย', FONT)
+    expect(layout(thai, 80, LINE_HEIGHT).lineCount).toBeGreaterThan(0)
+
+    setLocale(undefined)
+    const latin = prepare('hello world', FONT)
+    expect(layout(latin, 200, LINE_HEIGHT)).toEqual({ lineCount: 1, height: LINE_HEIGHT })
   })
 })
 
