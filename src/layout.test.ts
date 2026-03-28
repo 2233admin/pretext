@@ -508,6 +508,20 @@ describe('layout invariants', () => {
     expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 3, height: LINE_HEIGHT * 3 })
   })
 
+  test('pre-wrap mode keeps trailing spaces before a hard break on the current line', () => {
+    const prepared = prepareWithSegments('foo  \nbar', FONT, { whiteSpace: 'pre-wrap' })
+    const lines = layoutWithLines(prepared, 200, LINE_HEIGHT)
+    expect(lines.lines.map(line => line.text)).toEqual(['foo  ', 'bar'])
+    expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 2, height: LINE_HEIGHT * 2 })
+  })
+
+  test('pre-wrap mode keeps trailing tabs before a hard break on the current line', () => {
+    const prepared = prepareWithSegments('foo\t\nbar', FONT, { whiteSpace: 'pre-wrap' })
+    const lines = layoutWithLines(prepared, 200, LINE_HEIGHT)
+    expect(lines.lines.map(line => line.text)).toEqual(['foo\t', 'bar'])
+    expect(layout(prepared, 200, LINE_HEIGHT)).toEqual({ lineCount: 2, height: LINE_HEIGHT * 2 })
+  })
+
   test('pre-wrap mode restarts tab stops after a hard break', () => {
     const prepared = prepareWithSegments('foo\n\tbar', FONT, { whiteSpace: 'pre-wrap' })
     const lines = layoutWithLines(prepared, 200, LINE_HEIGHT)

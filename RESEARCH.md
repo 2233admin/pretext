@@ -194,6 +194,8 @@ One tooling caveat also showed up during validation: Safari `Range`-based probe 
 
 I also did one broader raw-source validation pass to sanity-check whether `pre-wrap` needed a second permanent corpus layer. The first naive pass was noisy because raw Wikisource text is full of templates, headings, categories, and other markup that is not meaningful `pre-wrap` prose. After filtering obvious markup and using the script-appropriate extractor (`Range` for Southeast Asian and Arabic/Urdu snippets, span elsewhere), the filtered raw set went exact in both Chrome and Safari (`20/20`). That was enough evidence to keep the permanent repo coverage small: a compact browser-oracle set for spaces/newlines/indentation is the right durable check, and the giant raw-source pass can stay a one-time validation rather than a standing suite.
 
+I then did a second one-time generated whitespace sweep around the cases that matter more to textareas than prose corpora: spaces and tabs right before hard breaks, whitespace-only lines, leading indentation after hard breaks, and mixed combinations of spaces / tabs / newlines. That generated matrix also went exact in both Chrome and Safari (`256/256`). That made the stopping point clearer: the standing repo coverage should stay compact and product-shaped, while broader synthetic whitespace exploration can remain an occasional validation step instead of a permanent suite.
+
 ## Discovery: emoji canvas/DOM width discrepancy
 
 Canvas and DOM measure emoji at different widths on macOS (Chrome):

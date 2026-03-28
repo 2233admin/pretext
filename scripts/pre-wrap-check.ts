@@ -109,6 +109,20 @@ const ORACLE_CASES: OracleCase[] = [
     lineHeight: 32,
   },
   {
+    label: 'spaces before hard break',
+    text: 'foo  \nbar',
+    width: 220,
+    font: '18px serif',
+    lineHeight: 32,
+  },
+  {
+    label: 'tab before hard break',
+    text: 'foo\t\nbar',
+    width: 220,
+    font: '18px serif',
+    lineHeight: 32,
+  },
+  {
     label: 'crlf normalization',
     text: 'foo\r\n  bar',
     width: 220,
